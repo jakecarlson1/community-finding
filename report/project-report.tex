@@ -44,7 +44,46 @@ It is important to note that the MIT Media Lab researchers based their network a
     \label{election}
 \end{figure}
 
-% TODO: community quality evaluation work
+\section{Assessing Cluster Quality}
+There are several methods for evaluating the quality of clusters. Leskovec et al. at Stanford performed an emperical comparision of several community detection algorithms, including the spectral-based graph partitioning method Local Spectral (similar to Spectral Bisection below), and the flow-based partitioning algorithm Metis+MQI (similar to Edge Betweenness below) \cite{Leskovec:2010:ECA:1772690.1772755}. They apply these methods to various data sets.
+\par
+The primary community score metric they use is conductance. Conductance measures cluster quality by looking at the ratio of edges in the community to the number of edges that leave that community. Formally, conductance is expressed as:
+
+\begin{align}
+    \phi(S) &= \frac{c_S}{min(Vol(S), Vol(V \setminus S))} \\
+    c_S &= |{(u, v) : u \in S, v \notin S}| \\
+    Vol(S) &= \sum_{u \in S}d(u)
+\end{align}
+
+where $S$ is the set of nodes in the community, $d(u)$ is the degree of node $u$. This captures both the connectedness of the community, as well as the connectedness of the community to the rest of the graph. The obejctive for a community detection algorithm is to minimize conductance.
+\par
+The authors identify that there are two key criteria for assessing the quality of clusters, the number of edges within a cluster, and the number of edges that join that cluster with the rest of the graph. They group the remaining quality scores into two groups, those that depend on both of these criteria (multi-criterion scores), and those that depend on only one of these criteria (single criterion scores) \cite{Leskovec:2010:ECA:1772690.1772755}.
+\par
+It is evident that conductance is a multi-criterion score as is depends on edges within the community as well as edges that leave the community. There are several other multi-criterion scores including expansion, internal density, and cut ratio. Expansion is given as:
+
+\begin{align}
+    f(S) &= \frac{c_S}{n_S}
+\end{align}
+
+where $c_S$ is the number of edges on the boundary of set $S$, and $n_S$ is the number of nodes in $S$. Internal density is given as:
+
+\begin{align}
+    f(S) &= 1 - \frac{m_S}{n_S(n_S - 1)/2}
+\end{align}
+
+where $m_S$ is the number of edges in $S$. Finally, cut ratio is given as:
+
+\begin{align}
+    f(S) &= \frac{c_S}{n_S(n - n_S)}
+\end{align}
+
+where $n$ is the number of nodes in the entire graph. One key single cirterion score is modularity, which is given by:
+
+\begin{align}
+    f(S) &= \frac{1}{4m}(m_S - E(m_S))
+\end{align}
+
+where $E(m_S)$ is the expected number of edges in a random graph where the degrees of each node remain the same as the original community $S$. This measure is discussed more under Modularity.
 
 \section{Algorithms}
 Several algorithms have been introduced to mine communities from connection information. Several of these algorithms are discussed here, along with details of my reimplementation of these algorithms.
@@ -53,7 +92,7 @@ Several algorithms have been introduced to mine communities from connection info
     The spectral bisection method for detecting communities in graphs proposed by Pothen et al. involves using the eigenvectors of the Laplacian matrix for a graph to determine where to cut the graph \cite{doi:10.1137/0611030}. The Laplacian matrix for a graph is given by:
 
     \begin{align}
-        L = D - A
+        L &= D - A
     \end{align}
 
     where $D$ is the diagonal matrix containing the degrees of each vertex, and A is the adjacency matrix for the graph. Once this matrix is found, the graph can be divided by taking the median value $x$ of the eigenvector with the second lowest eigenvalue of the Laplacian matrix. The graph is then split into two sets, $A$ and $B$ where $A$ has verticies whose components are less than or equal to $x$, and $B$ has all vertices whose components are greater than $x$. If the difference in the sizes of these sets is greater than one, verticies whose components equal $x$ are arbitrarily reassigned to $B$ until the difference in the sizes of $A$ and $B$ is one.
@@ -96,7 +135,9 @@ Several algorithms have been introduced to mine communities from connection info
         r_{ij} &= \sqrt{\sum^n_{k=1}{\frac{(P^t_{ik} - P^t_{jk})^2}{d(k)}}}
     \end{align}
 
-    This measure compares the probability of arriving at the same node $k$ when starting from both nodes $i$ and $j$.
+    This measure compares the probability of arriving at the same node $k$ when starting from both nodes $i$ and $j$. If the probabilities of arriving at $k$ are similar for all nodes in the graph, then the distance between $i$ and $j$ is small and they are likely part of the same community. Conversely, if the probabilities of arriving at $k$ differ for many entries in the probability lists, $i$ and $j$ are likely not in the same community.
+    \par
+    The authors note that their algorithm works well for short random walks fo $3 <= t <= 8$. The authors also advise decreasing $t$ if the graph is dense, and increasing $t$ if the graph is sparse. This is because the convergence speed of a random walk increases as the density of the graph increases \cite{10.1007/11569596_31}.
 
 \section{Evaluation}
 To examine the usefulness of these algorithms, I will use them to detect communities in Stack Overflow data. I will compare the performance of my implementations against existing implementations in the igraph package. This will provide insight into the correctness of my implementations as the results should be very similar when compared against igraph. The Stack Overflow data is contains a table of questions, a table of answers to those questions, and a list of tags associated with each question. In the questions and answers tables, there are also fields indicating the user who posted the question. In this data, community structure exists in the form of questions that are about related topics. For example, we would expect a user who is active in the C++ community to answer many questions about C++. It is also possible for users to be active in multiple different communities.
@@ -104,6 +145,8 @@ To examine the usefulness of these algorithms, I will use them to detect communi
 Initially I thought it would be useful to represent both users and questions in the graph we are mining for communities, however, this proved to not be useful. Representing both users and questions forms a bipartite graph where all edges go between user and question nodes. Although this better represents the original data, this makes it much harder to do community detection. For example, if a user is active in multiple communities, there will be more connections joining these communities and it will be harder to find the community structure.
 \par
 To account for this, I manipulated the graph to better encode the tag information. To do this I removed the user nodes, and created edges between questions that share a tag. It can be seen that this will significantly increase the connectedness of the graph, but this connectedness is useful for algorithms such as Walktrap.
+
+% TODO: implement and evaluate methods
 
 \section{Conclusion}
 
