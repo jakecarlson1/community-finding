@@ -95,7 +95,7 @@ Several algorithms have been introduced to mine communities from connection info
         L &= D - A
     \end{align}
 
-    where $D$ is the diagonal matrix containing the degrees of each vertex, and A is the adjacency matrix for the graph. Once this matrix is found, the graph can be divided by taking the median value $x$ of the eigenvector with the second lowest eigenvalue of the Laplacian matrix. The graph is then split into two sets, $A$ and $B$ where $A$ has verticies whose components are less than or equal to $x$, and $B$ has all vertices whose components are greater than $x$. If the difference in the sizes of these sets is greater than one, verticies whose components equal $x$ are arbitrarily reassigned to $B$ until the difference in the sizes of $A$ and $B$ is one.
+    where $D$ is the diagonal matrix containing the degrees of each vertex, and $A$ is the adjacency matrix for the graph. Once this matrix is found, the graph can be divided by taking the median value $x$ of the eigenvector with the second lowest eigenvalue of the Laplacian matrix. The graph is then split into two sets, $A$ and $B$ where $A$ has verticies whose components are less than or equal to $x$, and $B$ has all vertices whose components are greater than $x$. If the difference in the sizes of these sets is greater than one, verticies whose components equal $x$ are arbitrarily reassigned to $B$ until the difference in the sizes of $A$ and $B$ is one.
     \par
     We then consider the set of edges who have one vertex in $A$ and another vertex in $B$. This is an edge separator of the graph, taken from the bipartite graph contained in $A$ and $B$. With this edge separator, it is possible to compute the minimum vertex cover of the bipartite graph contained in $A$ and $B$. This cover is then used as the vertex separator to divide the graph into two parts.
     \par
@@ -145,6 +145,8 @@ To examine the usefulness of these algorithms, I will use them to detect communi
 Initially I thought it would be useful to represent both users and questions in the graph we are mining for communities, however, this proved to not be useful. Representing both users and questions forms a bipartite graph where all edges go between user and question nodes. Although this better represents the original data, this makes it much harder to do community detection. For example, if a user is active in multiple communities, there will be more connections joining these communities and it will be harder to find the community structure.
 \par
 To account for this, I manipulated the graph to better encode the tag information. To do this I removed the user nodes, and created edges between questions that share a tag. It can be seen that this will significantly increase the connectedness of the graph, but this connectedness is useful for algorithms such as Walktrap.
+\par
+\textit{Need to evaluate implementations...}
 
 % TODO: implement and evaluate methods
 

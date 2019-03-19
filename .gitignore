@@ -7,6 +7,9 @@ data/
 # jupyter checkpoints
 .ipynb_checkpoints/
 
+# pycache
+__pycache__/
+
 # Latex build files
 report/*.aux
 report/*.bbl
