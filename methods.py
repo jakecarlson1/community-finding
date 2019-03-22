@@ -1,4 +1,23 @@
 import numpy as np
+from igraph.drawing.colors import ClusterColoringPalette
+
+def _get_memberships(a, b):
+    i = 0
+    j = 0
+    result = []
+    while i < len(a) and j < len(b):
+        if a[i] < b[j]:
+            result.append(0)
+            i += 1
+        else:
+            result.append(1)
+            j += 1
+    if i < len(a):
+        result.extend([0] * (len(a) - i))
+    elif j < len(b):
+        result.extend([1] * (len(b) - j))
+
+    return result
 
 def spectral_bisection(g):
     n_nodes = len(g.vs)
@@ -41,10 +60,23 @@ def spectral_bisection(g):
         for i in t:
             s1.add(g.vs[i]['name'])
     s2 = set(map(lambda v: v['name'], g2.vs))
-    print(s1 - s2)
-    print(s2 - s1)
 
     # find min vertex cover of vertices
+    types = [v['name'] in set([g.vs[i]['name'] for i in a]) for v in g2.vs]
+    matching = g2.maximum_bipartite_matching(types=types)
+
+    rm = (set(), set())
+    for e in matching.edges():
+        idx_to_use = np.random.randint(2)
+        rm[idx_to_use].add(g2.vs[e.tuple[idx_to_use]]['name'])
+
+    partitioned = g.copy()
+    palette = ClusterColoringPalette(2)
+    partitioned.vs['color'] = palette.get_many(_get_memberships(a, b))
+    #rm_vs = g.vs.select(lambda v: v['name'] in rm[0] or v['name'] in rm[1])
+    #partitioned.delete_vertices(rm_vs)
+    
+    return partitioned
     
 # def edge_betweenness(g):
 
