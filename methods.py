@@ -85,7 +85,17 @@ def spectral_bisection(g):
 
 # def modularity(g):
 
-# def _walktrap_dist(a, b, probs):
+def _walktrap_node_dist(i, j, probs):
+    return np.linalg.norm(np.subtract(probs[i], probs[j]))
+
+def _walktrap_com_prob(a, probs):
+    p = np.matrix([probs[i] for i in a])
+    return np.array([np.sum(p[:,i]) for i in range(p.shape[1])]) / len(a)
+
+def _walktrap_com_dist(a, b, probs):
+    a_prob = _walktrap_com_prob(a, probs)
+    b_prob = _walktrap_com_prob(b, probs)
+    return np.linalg.norm(np.subtract(a_prob, b_prob))
 
 def walktrap_cf(g):
     # build transition matrix
@@ -101,9 +111,11 @@ def walktrap_cf(g):
     probs = fractional_matrix_power(degree, -0.5) @ transition
 
     # initialize n communities with 1 element
-    comms = [[i] for i in range(len(g.vs))]
+    coms = [[i] for i in range(len(g.vs))]
 
     # iteratively merge communities that are closest, recompute distance
+    dist = _walktrap_com_dist(coms[0], coms[1], probs)
+    print(dist)
 
 # def walktrap_sim(g):
 
