@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg import fractional_matrix_power
 from igraph.drawing.colors import ClusterColoringPalette
 
 def _get_memberships(a, b):
@@ -20,6 +21,7 @@ def _get_memberships(a, b):
     return result
 
 def spectral_bisection(g):
+    # build laplacian matrix
     n_nodes = len(g.vs)
     laplacian = np.zeros(shape=(n_nodes, n_nodes))
     for v in g.vs:
@@ -27,6 +29,7 @@ def spectral_bisection(g):
             laplacian[v.index][n.index] = -1
         laplacian[v.index][v.index] = v.degree()
 
+    # eigenvector decomposition of symetric laplacian
     values, vectors = np.linalg.eigh(laplacian)
 
     # find second smallest eigenvalue
@@ -82,5 +85,25 @@ def spectral_bisection(g):
 
 # def modularity(g):
 
-# def walktrap(g):
+# def _walktrap_dist(a, b, probs):
+
+def walktrap_cf(g):
+    # build transition matrix
+    n_nodes = len(g.vs)
+    degree = np.zeros(shape=(n_nodes, n_nodes))
+    adjacent = np.zeros(shape=(n_nodes, n_nodes))
+    for v in g.vs:
+        for n in v.neighbors():
+            adjacent[v.index][n.index] = 1
+        degree[v.index][v.index] = v.degree()
+
+    transition = np.linalg.inv(degree) @ adjacent
+    probs = fractional_matrix_power(degree, -0.5) @ transition
+
+    # initialize n communities with 1 element
+    comms = [[i] for i in range(len(g.vs))]
+
+    # iteratively merge communities that are closest, recompute distance
+
+# def walktrap_sim(g):
 
