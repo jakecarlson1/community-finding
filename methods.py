@@ -90,14 +90,18 @@ def _walktrap_node_dist(i, j, probs):
 
 def _walktrap_com_prob(a, probs):
     p = np.matrix([probs[i] for i in a])
-    return np.array([np.sum(p[:,i]) for i in range(p.shape[1])]) / len(a)
+    return np.array([np.sum(p[: ,i]) for i in range(p.shape[1])]) / len(a)
 
-def _walktrap_com_dist(a, b, probs):
+def _walktrap_com_dist(a, b, probs, t):
     a_prob = _walktrap_com_prob(a, probs)
     b_prob = _walktrap_com_prob(b, probs)
-    return np.linalg.norm(np.subtract(a_prob, b_prob))
+    return np.linalg.norm(t * np.subtract(a_prob, b_prob))
 
-def walktrap_cf(g):
+def _walktrap_com_var(a, b, probs, t):
+    dist = _walktrap_com_dist(a, b, probs, t)
+    return len(a) * len(b) / (len(a) + len(b)) / probs.shape[0] * (dist ** 2)
+
+def walktrap_cf(g, t=4):
     # build transition matrix
     n_nodes = len(g.vs)
     degree = np.zeros(shape=(n_nodes, n_nodes))
@@ -111,11 +115,52 @@ def walktrap_cf(g):
     probs = fractional_matrix_power(degree, -0.5) @ transition
 
     # initialize n communities with 1 element
-    coms = [[i] for i in range(len(g.vs))]
+    coms = set([(i,) for i in range(len(g.vs))])
+    idx_to_com = {i:(i,) for i in range(len(g.vs))}
+
+    # calculate distances between nodes, add placeholders
+    dist_f = lambda i, j: _walktrap_com_var([i], [j], probs, t) if i != j else np.inf
+    dists = np.fromfunction(np.vectorize(dist_f), (n_nodes, n_nodes), dtype=int)
+    dists = np.append(dists, np.full((n_nodes, n_nodes), np.inf), axis=1)
+    dists = np.append(dists, np.full((n_nodes, n_nodes * 2), np.inf), axis=0)
 
     # iteratively merge communities that are closest, recompute distance
-    dist = _walktrap_com_dist(coms[0], coms[1], probs)
-    print(dist)
+    merges = []
+    while len(coms) > 1:
+        print(coms)
+        # find communities with min distance
+        min_idx = np.argmin(dists)
+        i = int(min_idx / (n_nodes * 2))
+        j = min_idx % (n_nodes * 2)
+        print(i, j)
+
+        # merge communities i and j
+        merges.append((i, j))
+        com_idx = n_nodes + len(merges)
+        idx_to_com[com_idx] = idx_to_com[i] + idx_to_com[j]
+
+        # fill dists at com_idx
+        for idx, c in idx_to_com.items():
+            if idx != com_idx:
+                dist = _walktrap_com_var(c, idx_to_com[com_idx], probs, t)
+                dists[idx, com_idx] = dist
+                dists[com_idx, idx] = dist
+
+        # remove merged elements from distance matrix
+        fill = np.full((n_nodes * 2,), np.inf)
+        dists[i, :] = fill
+        dists[:, i] = fill
+        dists[j, :] = fill
+        dists[:, j] = fill
+
+        # replace coms
+        coms.remove(idx_to_com[i])
+        coms.remove(idx_to_com[j])
+        coms.add(idx_to_com[com_idx])
+        for n in idx_to_com[com_idx]:
+            idx_to_com[n] = idx_to_com[com_idx]
+
+    return merges
 
 # def walktrap_sim(g):
 
