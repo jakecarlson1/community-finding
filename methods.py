@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.linalg import fractional_matrix_power
+from igraph import VertexDendrogram
 from igraph.drawing.colors import ClusterColoringPalette
 
 def _get_memberships(a, b):
@@ -101,7 +102,30 @@ def _walktrap_com_var(a, b, probs, t):
     dist = _walktrap_com_dist(a, b, probs, t)
     return len(a) * len(b) / (len(a) + len(b)) / probs.shape[0] * (dist ** 2)
 
-def walktrap_cf(g, t=4):
+def _build_membership_list(idx_to_com, n_nodes):
+    mem_count = 0
+    memberships = [-1 for _ in range(n_nodes)]
+    for n in range(n_nodes):
+        if memberships[n] == -1:
+            com = idx_to_com[n]
+            for v in com:
+                memberships[v] = mem_count
+            mem_count += 1
+
+    return memberships
+
+def _calculate_mod_quality(g, coms):
+    q = 0
+    for c in list(coms):
+        tot = len(g.es)
+        e_in = len(g.es.select(_between=(c, c)))
+        outside_c = list(set(range(len(g.vs))) - set(c))
+        e_out = len(g.es.select(_between=(c, outside_c)))
+        q += e_in / tot - ((e_out / tot) ** 2)
+
+    return q
+
+def walktrap_cf(g, t=4, modularity=True):
     # build transition matrix
     n_nodes = len(g.vs)
     degree = np.zeros(shape=(n_nodes, n_nodes))
@@ -126,22 +150,25 @@ def walktrap_cf(g, t=4):
 
     # iteratively merge communities that are closest, recompute distance
     merges = []
+    modularities = []
+    qualities = []
+    ignore = set()
+    memberships = []
     while len(coms) > 1:
-        print(coms)
         # find communities with min distance
         min_idx = np.argmin(dists)
         i = int(min_idx / (n_nodes * 2))
         j = min_idx % (n_nodes * 2)
-        print(i, j)
 
         # merge communities i and j
+        ignore.update([i, j])
         merges.append((i, j))
         com_idx = n_nodes + len(merges)
         idx_to_com[com_idx] = idx_to_com[i] + idx_to_com[j]
 
         # fill dists at com_idx
         for idx, c in idx_to_com.items():
-            if idx != com_idx:
+            if idx != com_idx and idx not in ignore:
                 dist = _walktrap_com_var(c, idx_to_com[com_idx], probs, t)
                 dists[idx, com_idx] = dist
                 dists[com_idx, idx] = dist
@@ -160,7 +187,20 @@ def walktrap_cf(g, t=4):
         for n in idx_to_com[com_idx]:
             idx_to_com[n] = idx_to_com[com_idx]
 
-    return merges
+        # calculate modularity of merge
+        memberships.append(_build_membership_list(idx_to_com, n_nodes))
+        modularities.append(g.modularity(memberships[-1]))
+        if modularity:
+            qualities.append(_calculate_mod_quality(g, coms))
+        else:
+            qualities.append(dist)
+
+    if not modularity:
+        qualities = [(qualities[i+1] - qualities[i]) / (qualities[i] - qualities[i-1]) for i in range(1, len(qualities)-1)]
+
+    optimal = len(qualities) - qualities.index(max(qualities)) + 1
+    result = VertexDendrogram(g, merges, optimal_count=optimal)
+    return result, memberships[qualities.index(max(qualities))-1]
 
 # def walktrap_sim(g):
 
