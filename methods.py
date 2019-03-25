@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import fractional_matrix_power
-from igraph import VertexDendrogram
+from igraph import VertexClustering, VertexDendrogram
 from igraph.drawing.colors import ClusterColoringPalette
 
 def _get_memberships(a, b):
@@ -86,16 +86,16 @@ def spectral_bisection(g):
 
 # def modularity(g):
 
-def _walktrap_node_dist(i, j, probs):
-    return np.linalg.norm(np.subtract(probs[i], probs[j]))
+def _walktrap_node_dist(i, j, probs, t):
+    return np.linalg.norm(np.subtract(probs[i], probs[j]) * t @ probs)
 
-def _walktrap_com_prob(a, probs):
+def _walktrap_com_prob(a, probs, t):
     p = np.matrix([probs[i] for i in a])
-    return np.array([np.sum(p[: ,i]) for i in range(p.shape[1])]) / len(a)
+    return np.array([np.sum(p[: ,i]) for i in range(p.shape[1])]) * t @ probs / len(a)
 
 def _walktrap_com_dist(a, b, probs, t):
-    a_prob = _walktrap_com_prob(a, probs)
-    b_prob = _walktrap_com_prob(b, probs)
+    a_prob = _walktrap_com_prob(a, probs, t)
+    b_prob = _walktrap_com_prob(b, probs, t)
     return np.linalg.norm(t * np.subtract(a_prob, b_prob))
 
 def _walktrap_com_var(a, b, probs, t):
@@ -125,7 +125,7 @@ def _calculate_mod_quality(g, coms):
 
     return q
 
-def walktrap_cf(g, t=4, modularity=True):
+def walktrap_cf(g, t=4, modularity=True, n_clusters=None):
     # build transition matrix
     n_nodes = len(g.vs)
     degree = np.zeros(shape=(n_nodes, n_nodes))
@@ -198,9 +198,14 @@ def walktrap_cf(g, t=4, modularity=True):
     if not modularity:
         qualities = [(qualities[i+1] - qualities[i]) / (qualities[i] - qualities[i-1]) for i in range(1, len(qualities)-1)]
 
-    optimal = len(qualities) - qualities.index(max(qualities)) + 1
-    result = VertexDendrogram(g, merges, optimal_count=optimal)
-    return result, memberships[qualities.index(max(qualities))-1]
+    optimal_idx = modularities.index(max(modularities))
+    if n_clusters != None:
+        optimal_idx = len(modularities) - n_clusters
+    optimal_count = len(modularities) - optimal_idx
+    #optimal_idx = qualities.index(max(qualities)) - 1
+    #optimal_count = len(qualities) - optimal_idx
+    result = VertexDendrogram(g, merges, optimal_count=optimal_count)
+    return result, VertexClustering(g, membership=memberships[optimal_idx])
 
 # def walktrap_sim(g):
 
