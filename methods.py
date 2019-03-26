@@ -86,19 +86,19 @@ def spectral_bisection(g):
 
 # def modularity(g):
 
-def _walktrap_node_dist(i, j, probs, t):
+def _walktrap_node_dist(i, j, probs, t=1):
     return np.linalg.norm(np.subtract(probs[i], probs[j]) * t @ probs)
 
 def _walktrap_com_prob(a, probs, t):
     p = np.matrix([probs[i] for i in a])
     return np.array([np.sum(p[: ,i]) for i in range(p.shape[1])]) * t @ probs / len(a)
 
-def _walktrap_com_dist(a, b, probs, t):
+def _walktrap_com_dist(a, b, probs, t=1):
     a_prob = _walktrap_com_prob(a, probs, t)
     b_prob = _walktrap_com_prob(b, probs, t)
-    return np.linalg.norm(t * np.subtract(a_prob, b_prob))
+    return np.linalg.norm(np.subtract(a_prob, b_prob))
 
-def _walktrap_com_var(a, b, probs, t):
+def _walktrap_com_var(a, b, probs, t=1):
     dist = _walktrap_com_dist(a, b, probs, t)
     return len(a) * len(b) / (len(a) + len(b)) / probs.shape[0] * (dist ** 2)
 
@@ -125,25 +125,14 @@ def _calculate_mod_quality(g, coms):
 
     return q
 
-def walktrap_cf(g, t=4, modularity=True, n_clusters=None):
-    # build transition matrix
+def _walktrap_solver(g, probs, t, n_clusters, dist_f):
     n_nodes = len(g.vs)
-    degree = np.zeros(shape=(n_nodes, n_nodes))
-    adjacent = np.zeros(shape=(n_nodes, n_nodes))
-    for v in g.vs:
-        for n in v.neighbors():
-            adjacent[v.index][n.index] = 1
-        degree[v.index][v.index] = v.degree()
-
-    transition = np.linalg.inv(degree) @ adjacent
-    probs = fractional_matrix_power(degree, -0.5) @ transition
 
     # initialize n communities with 1 element
     coms = set([(i,) for i in range(len(g.vs))])
     idx_to_com = {i:(i,) for i in range(len(g.vs))}
 
     # calculate distances between nodes, add placeholders
-    dist_f = lambda i, j: _walktrap_com_var([i], [j], probs, t) if i != j else np.inf
     dists = np.fromfunction(np.vectorize(dist_f), (n_nodes, n_nodes), dtype=int)
     dists = np.append(dists, np.full((n_nodes, n_nodes), np.inf), axis=1)
     dists = np.append(dists, np.full((n_nodes, n_nodes * 2), np.inf), axis=0)
@@ -151,7 +140,6 @@ def walktrap_cf(g, t=4, modularity=True, n_clusters=None):
     # iteratively merge communities that are closest, recompute distance
     merges = []
     modularities = []
-    qualities = []
     ignore = set()
     memberships = []
     while len(coms) > 1:
@@ -190,22 +178,58 @@ def walktrap_cf(g, t=4, modularity=True, n_clusters=None):
         # calculate modularity of merge
         memberships.append(_build_membership_list(idx_to_com, n_nodes))
         modularities.append(g.modularity(memberships[-1]))
-        if modularity:
-            qualities.append(_calculate_mod_quality(g, coms))
-        else:
-            qualities.append(dist)
-
-    if not modularity:
-        qualities = [(qualities[i+1] - qualities[i]) / (qualities[i] - qualities[i-1]) for i in range(1, len(qualities)-1)]
 
     optimal_idx = modularities.index(max(modularities))
     if n_clusters != None:
         optimal_idx = len(modularities) - n_clusters
     optimal_count = len(modularities) - optimal_idx
-    #optimal_idx = qualities.index(max(qualities)) - 1
-    #optimal_count = len(qualities) - optimal_idx
+
     result = VertexDendrogram(g, merges, optimal_count=optimal_count)
     return result, VertexClustering(g, membership=memberships[optimal_idx])
 
-# def walktrap_sim(g):
+
+def walktrap_cf(g, t=4, n_clusters=None):
+    # build transition matrix
+    n_nodes = len(g.vs)
+    degree = np.zeros(shape=(n_nodes, n_nodes))
+    adjacent = np.zeros(shape=(n_nodes, n_nodes))
+    for v in g.vs:
+        for n in v.neighbors():
+            adjacent[v.index][n.index] = 1
+        degree[v.index][v.index] = v.degree()
+
+    transition = np.linalg.inv(degree) @ adjacent
+    probs = fractional_matrix_power(degree, -0.5) @ transition
+
+    dist_f = lambda i, j: _walktrap_com_var([i], [j], probs, t) if i != j else np.inf
+    
+    return _walktrap_solver(g, probs, t, n_clusters, dist_f)
+
+def _walktrap_random_walk(g, s, t):
+    n_nodes = len(g.vs)
+    start_node = g.vs[s]
+    curr_node = start_node
+    while t > 0:
+        neighbors = curr_node.neighbors()
+        curr_node = neighbors[np.random.randint(len(neighbors))]
+        t -= 1
+
+    return start_node.index, curr_node.index
+
+def _walktrap_run_k_walks(g, t, k):
+    n_nodes = len(g.vs)
+    result = np.full((n_nodes, n_nodes), 0)
+    for i in range(n_nodes):
+        for _ in range(k):
+            start, end = _walktrap_random_walk(g, i, t)
+            result[start, end] += 1
+
+    return result / k
+
+def walktrap_sim(g, t=4, k=100, n_clusters=None):
+    probs = _walktrap_run_k_walks(g, t, k)
+
+    dist_f = lambda i, j: _walktrap_com_var([i], [j], probs) if i != j else np.inf
+
+    return _walktrap_solver(g, probs, t, n_clusters, dist_f)
 
