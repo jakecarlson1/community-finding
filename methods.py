@@ -84,7 +84,19 @@ def spectral_bisection(g):
     
 # def edge_betweenness(g):
 
-# def modularity(g):
+def modularity(g):
+    # build transition matrix
+    n_nodes = len(g.vs)
+    n_edges = len(g.es)
+    adjacent = np.zeros(shape=(n_nodes, n_nodes))
+    for v in g.vs:
+        for n in v.neighbors():
+            adjacent[v.index][n.index] = 1 - (v.degree() * n.degree() / (2 * n_edges))
+
+    # needed?
+    # quality =
+
+    # use spectral approach to divide nodes
 
 def _walktrap_node_dist(i, j, probs, t=1):
     return np.linalg.norm(np.subtract(probs[i], probs[j]) * t @ probs)
