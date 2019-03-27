@@ -4,8 +4,6 @@ from igraph import VertexClustering, VertexDendrogram
 from igraph.drawing.colors import ClusterColoringPalette
 
 def _get_memberships(a, b):
-    print(a)
-    print(b)
     i = 0
     j = 0
     result = []
@@ -28,11 +26,11 @@ def _spectral_solver(g, mtx, method="spectral"):
     values, vectors = np.linalg.eigh(mtx)
 
     # find ev_to_use largest eigenvalue
-    # ev_to_use =  2 => second smallest value
+    # ev_to_use =  1 => second smallest value
     # ev_to_use = -2 => second largest value
     ev_to_use = 1
     if method == "spectral":
-        ev_to_use = -2
+        ev_to_use = 1
     elif method == "modularity":
         ev_to_use = -1
     eval_2 = np.partition(values.flatten(), ev_to_use)[ev_to_use]
@@ -45,8 +43,8 @@ def _spectral_solver(g, mtx, method="spectral"):
         evec_med = 0
 
     # partition g into a and b, a has value <= median, b has value > median
-    a = [i for i, v in enumerate(evec_2) if v <= evec_med]
-    b = [i for i, v in enumerate(evec_2) if v > evec_med]
+    a = [i for i, v in enumerate(evec_2) if v < evec_med]
+    b = [i for i, v in enumerate(evec_2) if v >= evec_med]
 
     # take vertices that have edges running between a and b
     edge_separator = g.es.select(_between=(a, b))
@@ -60,7 +58,7 @@ def _spectral_solver(g, mtx, method="spectral"):
     palette = ClusterColoringPalette(2)
     g.vs['color'] = palette.get_many(_get_memberships(a, b))
     
-    return g
+    return g, values, vectors
     
 def spectral_bisection(g):
     # build laplacian matrix
@@ -73,7 +71,13 @@ def spectral_bisection(g):
 
     return _spectral_solver(g, laplacian)
 
-# def edge_betweenness(g):
+def edge_betweenness(g):
+    pass
+    # calculate betweenness for all edges
+
+    # remove edge with highest betweenness
+
+    # recalculate betweenness for all edges affected by removal
 
 def modularity(g):
     # build transition matrix
