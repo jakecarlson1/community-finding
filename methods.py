@@ -71,7 +71,7 @@ def spectral_bisection(g):
 
     return _spectral_solver(g, laplacian)
 
-def edge_betweenness(g):
+def edge_betweenness(g, n_clusters=None):
     g2 = g.copy()
     n_nodes = len(g2.vs)
 
@@ -98,10 +98,12 @@ def edge_betweenness(g):
         j = m[1]
 
         # replace coms
-        idx_to_com[com_idx] = idx_to_com[i] + idx_to_com[j]
-        coms.remove(idx_to_com[i])
-        if j not in idx_to_com[i]:
-            coms.remove(idx_to_com[j])
+        remove = set([idx_to_com[i], idx_to_com[j]])
+        if j in idx_to_com[i]:
+            idx_to_com[com_idx] = idx_to_com[i]
+        else:
+            idx_to_com[com_idx] = idx_to_com[i] + idx_to_com[j]
+        coms = coms.difference(remove)
         coms.add(idx_to_com[com_idx])
         for n in idx_to_com[com_idx]:
             idx_to_com[n] = idx_to_com[com_idx]
