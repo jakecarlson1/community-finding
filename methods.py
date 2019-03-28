@@ -72,12 +72,53 @@ def spectral_bisection(g):
     return _spectral_solver(g, laplacian)
 
 def edge_betweenness(g):
-    pass
-    # calculate betweenness for all edges
+    g2 = g.copy()
+    n_nodes = len(g2.vs)
 
-    # remove edge with highest betweenness
+    merges = []
+    while len(g2.es) > 0:
+        # calculate betweenness for all edges
+        betweenness = g2.edge_betweenness()
 
-    # recalculate betweenness for all edges affected by removal
+        # remove edge with highest betweenness
+        max_idx = betweenness.index(max(betweenness))
+        merges.append(g2.es[max_idx].tuple)
+        g2.delete_edges(g2.es[max_idx])
+
+    # apply removals in reverse order to n communities of size 1
+    coms = set([(i,) for i in range(len(g2.vs))])
+    idx_to_com = {i:(i,) for i in range(len(g2.vs))}
+ 
+    merges.reverse()
+    modularities = []
+    memberships = []
+    com_idx = n_nodes
+    for m in merges:
+        i = m[0]
+        j = m[1]
+
+        # replace coms
+        idx_to_com[com_idx] = idx_to_com[i] + idx_to_com[j]
+        coms.remove(idx_to_com[i])
+        if j not in idx_to_com[i]:
+            coms.remove(idx_to_com[j])
+        coms.add(idx_to_com[com_idx])
+        for n in idx_to_com[com_idx]:
+            idx_to_com[n] = idx_to_com[com_idx]
+        
+        com_idx += 1
+
+        # calculate modularity of merge
+        memberships.append(_build_membership_list(idx_to_com, n_nodes))
+        modularities.append(g.modularity(memberships[-1]))
+
+    optimal_idx = modularities.index(max(modularities))
+    if n_clusters != None:
+        optimal_idx = len(modularities) - n_clusters
+    optimal_count = len(modularities) - optimal_idx
+
+    result = VertexDendrogram(g, merges, optimal_count=optimal_count)
+    return result, VertexClustering(g, membership=memberships[optimal_idx])
 
 def modularity(g):
     # build transition matrix
@@ -134,8 +175,8 @@ def _walktrap_solver(g, probs, t, n_clusters, dist_f):
     n_nodes = len(g.vs)
 
     # initialize n communities with 1 element
-    coms = set([(i,) for i in range(len(g.vs))])
-    idx_to_com = {i:(i,) for i in range(len(g.vs))}
+    coms = set([(i,) for i in range(n_nodes)])
+    idx_to_com = {i:(i,) for i in range(n_nodes)}
 
     # calculate distances between nodes, add placeholders
     dists = np.fromfunction(np.vectorize(dist_f), (n_nodes, n_nodes), dtype=int)
