@@ -1,7 +1,9 @@
 \documentclass{article}
 \usepackage{graphicx}
 \usepackage{amsmath}
+\usepackage{adjustbox}
 \usepackage{cite}
+\usepackage{color}
 \usepackage{geometry}
 \geometry{
     letterpaper,
@@ -10,6 +12,8 @@
     top=1in,
     bottom=1in
 }
+
+\definecolor{gray}{rgb}{0.75, 0.75, 0.75}
 
 \begin{document}
 
@@ -214,5 +218,63 @@ To account for this, I manipulated the graph to better encode the tag informatio
 \newpage
 \bibliography{sources}
 \bibliographystyle{plain}
+
+\newpage
+
+\begin{figure}[h]
+    \begin{minipage}{0.48\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/mod-j.png}}
+    \end{minipage}
+    \hspace{\fill}
+    \begin{minipage}{0.48\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/mod-i.png}}
+    \end{minipage}
+
+    \caption{Result of modularity method on Karate Club. left: my implementation, right: iGraph implementation}
+    \label{mod}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{minipage}{0.48\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/spec-j.png}}
+    \end{minipage}
+    \hspace{\fill}
+    \begin{minipage}{0.48\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/spec-i.png}}
+    \end{minipage}
+
+    \caption{Result of spectral bisection method on Karate Club. left: my implementation, right: iGraph implementation}
+    \label{spec}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{minipage}{0.48\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/eb-j.png}}
+    \end{minipage}
+    \hspace{\fill}
+    \begin{minipage}{0.48\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/eb-i.png}}
+    \end{minipage}
+
+    \caption{Result of edge betweenness method on Karate Club. left: my implementation, right: iGraph implementation}
+    \label{eb}
+\end{figure}
+
+\begin{figure}[h]
+    \begin{minipage}{0.3\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/walktrap-cf.png}}
+    \end{minipage}
+    \hspace{\fill}
+    \begin{minipage}{0.3\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/walktrap-sim.png}}
+    \end{minipage}
+    \hspace{\fill}
+    \begin{minipage}{0.3\textwidth}
+    \colorbox{gray}{\includegraphics[width=\linewidth]{./images/walktrap-i.png}}
+    \end{minipage}
+
+    \caption{Result of walktrap method on Karate Club. left: my closed form implementation, center: my simulated implementation, right: iGraph implementation}
+    \label{walktrap}
+\end{figure}
 
 \end{document}
