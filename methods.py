@@ -58,7 +58,7 @@ def _spectral_solver(g, mtx, method="spectral"):
     palette = ClusterColoringPalette(2)
     g.vs['color'] = palette.get_many(_get_memberships(a, b))
     
-    return g, values, vectors
+    return VertexClustering(g, membership=_get_memberships(a, b))
     
 def spectral_bisection(g):
     # build laplacian matrix

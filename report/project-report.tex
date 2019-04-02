@@ -61,7 +61,7 @@ The primary community score metric they use is conductance. Conductance measures
     Vol(S) &= \sum_{u \in S}d(u)
 \end{align}
 
-where $S$ is the set of nodes in the community, $d(u)$ is the degree of node $u$. This captures both the connectedness of the community, as well as the connectedness of the community to the rest of the graph. The obejctive for a community detection algorithm is to minimize conductance.
+where $S$ is the set of nodes in the community, $d(u)$ is the degree of node $u$. This captures both the connectedness of the community, as well as the connectedness of the community to the rest of the graph. The obejctive for a community detection algorithm is to minimize conductance. Conductance can also be taken for a partitioning of a graph with multiple cuts by taking the minimum conductance for any cut.
 \par
 The authors identify that there are two key criteria for assessing the quality of clusters, the number of edges within a cluster, and the number of edges that join that cluster with the rest of the graph. They group the remaining quality scores into two groups, those that depend on both of these criteria (multi-criterion scores), and those that depend on only one of these criteria (single criterion scores) \cite{Leskovec:2010:ECA:1772690.1772755}.
 \par
@@ -193,7 +193,7 @@ Several algorithms have been introduced to mine communities from connection info
     The simulated implementation of this algorithm is very similar to closed form solution. The only difference is that I build the transition matrix by running $k$ random walks from each node in the graph, and normalize the number of times we arrived at each node by $k$. Each random walk uniformly chooses between edges of the current node, and then sets the neighbor on that edge as the current node. This happend $t$ times. I then pass this matrix to the same Walktrap solver used for the closed form solution. I also provide a distance fuction which only differs from the distance function for the closed form implementation by setting $t = 1$. This accounts for the fact that $t$ has already been used to calculate the transition matrix, and does not need to be multiplied by the probability vector of each vertex.
 
 \section{Evaluation}
-To examine the usefulness of these algorithms, I will use them to detect communities in Zachary's Karate Club data. I will compare the performance of my implementations against existing implementations in the iGraph package. This will provide insight into the correctness of my implementations as the results should be very similar when compared against iGraph.
+To examine the usefulness of these algorithms, I will use them to detect communities in Zachary's Karate Club data. I will compare the performance of my implementations against existing implementations in the iGraph package. This will provide insight into the correctness of my implementations as the results should be very similar when compared against iGraph. I will also evaluate the conductance of each partitioning to see which implementation produces the best conductance score (the minimum conductance).
 \par
 This data set represents the social network of a karate club. After the data was recorded, a dispute between two leaders of the group caused the club to split into two factions. The community detection algorithms should be able to determine where the karate club split into two groups.
 
@@ -201,16 +201,23 @@ This data set represents the social network of a karate club. After the data was
     This method works well when the graph is easily separable into two distinct groups, however, it struggles when the graph is not easily separable \cite{Newman2004}. For the Karate Club data, spectral partitioning does not perform well. It is understood in the community finding literature that spectral methods perform better on synthetic/random graph over real-world graphs. A side-by-side of the clusters determined by my implementation and the iGraph implementation is provided in Figure \ref{spec}.
     \par
     It is clear that this partitioning is not optimal. The karate club data is supposed to separate easily into two groups. My implementation decides that two groups is optimal for this clustering, but the nodes appear randomly distributed, and no clear communities are visible. The iGraph implementation forms recognizable groups, but this is mired by the distribution of green nodes, since 0, 10, 11, and 16 are part of the green cluster which has most of its members in the other half of the graph.
+    \par
+    The conductance of the partitioning produces by my implementation is $0.47$, while iGraph's implementation produced a clustering with a conductance of $0.25$.
 
     \subsection{Edge Betweenness}
-    Both my implementation of edge betweenness and the iGraph implementation perform well on this data set. The optimal number of communities is determined to be 5 for each method, but the clusters form much more distinguishable communities. Moreover, all nodes are clustered into the same groups between my implementation and the iGraph implementation. This verifies the accuracy of my implementation.
+    Both my implementation of edge betweenness and the iGraph implementation perform well on this data set. The optimal number of communities is determined to be five for each method, but the clusters form much more distinguishable communities. Moreover, all nodes are clustered into the same groups between my implementation and the iGraph implementation. This verifies the accuracy of my implementation.
+    \par
+    The conductance of the partitioning produces by my implementation is $0.22$, while iGraph's implementation produced a clustering with a conductance of $0.22$.
 
     \subsection{Modularity}
     Modularity, being a spectral method, also does not perform well on this data set. My modularity method once again produces two clusters, but the vertices are not grouped into recognizable clusters. The iGraph implementation performs better, producing four clusters. Here, merging together the blue and yellow clusters, as well as the red and green clusters produces the optimal clustering.
+    \par
+    The conductance of the partitioning produces by my implementation is $0.36$, while iGraph's implementation produced a clustering with a conductance of $0.13$.
 
     \subsection{Walktrap}
-    The walktrap implementations perform the best on this data set. My closed form and simulated implementations produce the same clustering on this data set, the only difference is that 2 is assigned to the green group in closed form version and the red group in the simulated version. The iGraph implementation also pulls out communities, but the optimal number of clusters is determined to be 5. However, merging together the blue and red groups and the green, yellow, and pink groups produces the same clustering as my closed form solution.
+    The walktrap implementations perform the best on this data set. My closed form and simulated implementations produce the same clustering on this data set, the only difference is that 2 is assigned to the green group in closed form version and the red group in the simulated version. The iGraph implementation also pulls out communities, but the optimal number of clusters is determined to be five. However, merging together the blue and red groups and the green, yellow, and pink groups produces the same clustering as my closed form solution.
     \par
+    When it comes to conductance, all of the implementations of walktrap produces a partitioning with the same conductance, $0.11$.
 
     % TODO: conductance comparision
 
