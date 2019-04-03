@@ -33,8 +33,8 @@ A report on implementing algorithms to find community structure in graphs. We wi
 Finding communities in network data has become more important in recent years. Community detection allows researchers to examine connections between people, and communication between different goups of people. This sort of analysis can provide deeper insight into how certain social networks operate, and can help explain some real-world events. The widespread usage of social networks has made large, graph-based data sets widely available that provide fine-grained information about how people connect and interact.
 \par
 It is possible to find communities within this graph data by defining what a community is in a graph, and then finding a way to extract that information from the graph data set. Community structure is typically defined as densely connected groups of verticies, joined by sparser connections between groups \cite{Newman2004}. This definition is more formally encoded in the idea of graph modularity. The modularity of a graph increases if there are fewer than expected edges between communities. The expected number of edges between communities is based off of how many edges one would expect to fall between communities if edges were inserted at random \cite{Newman2006}. This concept is discussed more in the Modularity section.
-
-% TODO: talk about why I'm doing this, how it relates to clustering and partitioning
+\par
+All of these methods are implemented to partition a graph into two subgraphs such that there are more edges within the subgraphs than there are between the subgraphs. This partitioning problem can also be phrased as a clustering problem where the goal is to find clusters of vertices that are close together. If the method continues to subdivide the graph until there are no edges left, or there is no cut that satisfies the parameters of the method, we will be left with a hierarchy of cuts that produce a dendrogram when reassembled.
 
 \section{Background}
 The usefulness of community detection was demonstrated following the 2016 U.S. Presidential Election. Since so many models of candidate support proved to be incorrect, there was a scramble to find how so many supporters were not included in the building of those models. One social network that was studied was Twitter. Researchers from the Electome project at the MIT Media Lab performed an analysis of tweets leading up to the 2016 election. They found groups surrounding key issues, and individuals who were central to the conversation about those issues. By analyzing the follower networks for those users, and examining how those follower networks overlap, the researchers were able to find community structure in the network that proved critical to the outcome of the 2016 election \cite{vice}.
@@ -42,7 +42,6 @@ The usefulness of community detection was demonstrated following the 2016 U.S. P
 The network structure can clearly be seen in \ref{election}. In the figure, several clear groups are dsitinguishable, several in the upper left of the graphic, and one in the bottom right. Here, the groups in the top left are groups that supported Hillary Clinton, and the group in the bottom right supported Donald Trump. It can be seen that even between the different groups surrounding Clinton, there are still edges connecting users between those groups. This is in contrast to the major group surrounding Trump. Trump supporters had very few connections to people outside of the group, and key influencers and reporters had very few connections to the Trump group. This could explain why so many journalists were surprised by the result of the 2016 election, because they had no grasp over the size of the Trump support network.
 \par
 It is important to note that the MIT Media Lab researchers based their network analysis off of finding individuals central to the discussion of key issues. They used the PageRank algorithm to find these key individuals, and then looked at the overlap of their follower networks to find the community structures. Examining subgraph overlap is a key part of other community detection algorithms, including Walktrap, which will be discussed in depth later.
-% TODO: PageRank discussion
 
 \begin{figure}[h]
     \includegraphics[width=\linewidth]{./images/election.png}
@@ -103,8 +102,7 @@ Several algorithms have been introduced to mine communities from connection info
         L &= D - A
     \end{align}
 
-    % TODO: talked about the optimization problem for why you takes second largest eigenvector
-    where $D$ is the diagonal matrix containing the degrees of each vertex, and $A$ is the adjacency matrix for the graph. Once this matrix is found, the graph can be divided by taking the median value $x$ of the eigenvector with the second smallest eigenvalue of the Laplacian matrix. This is known as the Fiedler vector, after Miroslav Fiedler who showed that the eigenvalue for this eigenvector represents the algebraic connectivity of the graph. This means that the second eigenvector for the Laplacian most efficiently divides the graph into two partitions. Because we need each vertex to be placed in either group 1 or group 2, it can be difficult to select a vector for dividing the graph that is parallel to the second eigenvector. Instead, we can look at the components of the eigenvector. This is why we look at the median value of the eigenvector and assign vertices to their groups based on the sign of their component of the eigenvector \cite{Newman2006.2}.
+    where $D$ is the diagonal matrix containing the degrees of each vertex, and $A$ is the adjacency matrix for the graph. Once this matrix is found, the goal is to cut the graph such that there are minimum edges running between the partitions. The graph can be divided by taking the median value $x$ of the eigenvector with the second smallest eigenvalue of the Laplacian matrix. This is known as the Fiedler vector, after Miroslav Fiedler who showed that the eigenvalue for this eigenvector represents the algebraic connectivity of the graph. This means that the second eigenvector for the Laplacian most efficiently divides the graph into two partitions. Because we need each vertex to be placed in either group 1 or group 2, it can be difficult to select a vector for dividing the graph that is parallel to the second eigenvector. Instead, we can look at the components of the eigenvector. This is why we look at the median value of the eigenvector and assign vertices to their groups based on the sign of their component of the eigenvector \cite{Newman2006.2}.
     \par
     Using this vector, the graph is then split into two sets, $A$ and $B$ where $A$ has verticies whose components are less than or equal to $x$, and $B$ has all vertices whose components are greater than $x$. If the difference in the sizes of these sets is greater than one, verticies whose components equal $x$ are arbitrarily reassigned to $B$ until the difference in the sizes of $A$ and $B$ is one.
     \par
@@ -202,28 +200,27 @@ This data set represents the social network of a karate club. After the data was
     \par
     It is clear that this partitioning is not optimal. The karate club data is supposed to separate easily into two groups. My implementation decides that two groups is optimal for this clustering, but the nodes appear randomly distributed, and no clear communities are visible. The iGraph implementation forms recognizable groups, but this is mired by the distribution of green nodes, since 0, 10, 11, and 16 are part of the green cluster which has most of its members in the other half of the graph.
     \par
-    The conductance of the partitioning produces by my implementation is $0.47$, while iGraph's implementation produced a clustering with a conductance of $0.25$.
+    The conductance of the partitioning produces by my implementation is $0.47$, while iGraph's implementation produced a clustering with a conductance of $0.25$. This is happening because my spectral bisection method stops after making one cut, while the iGraph implementation makes multiple cuts. The conductance score from the iGraph implementation is lower because one of the other cuts better determins community structure than the single cut from my implementation.
 
     \subsection{Edge Betweenness}
     Both my implementation of edge betweenness and the iGraph implementation perform well on this data set. The optimal number of communities is determined to be five for each method, but the clusters form much more distinguishable communities. Moreover, all nodes are clustered into the same groups between my implementation and the iGraph implementation. This verifies the accuracy of my implementation.
     \par
-    The conductance of the partitioning produces by my implementation is $0.22$, while iGraph's implementation produced a clustering with a conductance of $0.22$.
+    The conductance of the partitioning produces by my implementation is $0.22$, while iGraph's implementation produced a clustering with a conductance of $0.22$. These value match indicating the two implementations produce results consistent with each other. This is also the best performing method for this data set, just short of walktrap.
 
     \subsection{Modularity}
     Modularity, being a spectral method, also does not perform well on this data set. My modularity method once again produces two clusters, but the vertices are not grouped into recognizable clusters. The iGraph implementation performs better, producing four clusters. Here, merging together the blue and yellow clusters, as well as the red and green clusters produces the optimal clustering.
     \par
-    The conductance of the partitioning produces by my implementation is $0.36$, while iGraph's implementation produced a clustering with a conductance of $0.13$.
+    The conductance of the partitioning produces by my implementation is $0.36$, while iGraph's implementation produced a clustering with a conductance of $0.13$. This is again because my implementation stops after making one cut in the graph. The iGraph implementation is free to make multiple cuts, and one of those produces a lower conductance score than the cut made by my implementation.
 
     \subsection{Walktrap}
     The walktrap implementations perform the best on this data set. My closed form and simulated implementations produce the same clustering on this data set, the only difference is that 2 is assigned to the green group in closed form version and the red group in the simulated version. The iGraph implementation also pulls out communities, but the optimal number of clusters is determined to be five. However, merging together the blue and red groups and the green, yellow, and pink groups produces the same clustering as my closed form solution.
     \par
-    When it comes to conductance, all of the implementations of walktrap produces a partitioning with the same conductance, $0.11$.
-
-    % TODO: conductance comparision
+    When it comes to conductance, all of the implementations of walktrap produce a partitioning with the same conductance, $0.11$. This reaffirms that my implementations are producing consistent reuslts compared to the iGraph implementation. This value also confirms that walktrap performs the best on this data set.
 
 \section{Conclusion}
-
-% TODO: conclusion
+Here we saw the results of running several community detection methods agains Zachary's Karate Club. All of the methods shown were implemented for this and compared against implementations of the same algorithms by the iGraph package. It was found that the spectral partitioning methods of spectral bisection and modularity did not perform as well on this data set as some of the other methods, producing communities that were not clearly separated and had a higher conductance. Perhaps the performance of these implementations could be improved if they allowed multiple cuts of the data.
+\par
+The edge betweenness method produced good results on this data set, even though it overestimated the number of communities. The smaller communities could be merged with a heuristic to form the expected community structure. The walktrap method performed the best on this data set. The closed form and simulated implementations produce results that are almost identical to each other. Again, the iGraph implementation determines there are more communities than my methods found, but the cuts occur in similar locations and the overall conductance is the same as my methods.
 
 \newpage
 \bibliography{sources}
