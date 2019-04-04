@@ -32,12 +32,12 @@ def _spectral_solver(g, mtx, method="spectral"):
     if method == "spectral":
         ev_to_use = 1
     elif method == "modularity":
-        ev_to_use = -1
+        ev_to_use = -2
     eval_2 = np.partition(values.flatten(), ev_to_use)[ev_to_use]
 
     # take median of corresponding eigenvector
     ev_idx = list(values).index(eval_2)
-    evec_2 = vectors[ev_idx]
+    evec_2 = vectors[:, ev_idx]
     evec_med = np.median(evec_2)
     if method == "modularity":
         evec_med = 0
